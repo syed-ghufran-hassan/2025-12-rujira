@@ -1,0 +1,35 @@
+[package]
+authors = []
+edition = { workspace = true }
+name    = "rujira-account"
+version = "0.0.0"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[package.metadata.thorchain]
+# See more about format in https://doc.rust-lang.org/cargo/reference/manifest.html#the-metadata-table
+auditors = [""]
+audits   = [""]
+docs     = ""
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+# use library feature to disable all instantiate/execute/query exports
+library = []
+
+[dependencies]
+cosmwasm-schema = { workspace = true }
+cosmwasm-std    = { workspace = true }
+cw-storage-plus = { workspace = true }
+cw-utils        = { workspace = true }
+cw2             = { workspace = true }
+itertools       = { workspace = true }
+rujira-rs       = { workspace = true, features = ["interface-orca", "interface-bow", "asset", "decimal-scaled", "premium", "oracle", "query", "bid-pool", "exchange"], default-features = false }
+schemars        = { workspace = true }
+serde           = { workspace = true }
+thiserror       = { workspace = true }
+
+[dev-dependencies]
+cw-multi-test = { workspace = true }

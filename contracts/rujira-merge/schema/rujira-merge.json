@@ -1,0 +1,327 @@
+{
+  "contract_name": "rujira-merge",
+  "contract_version": "1.0.4",
+  "idl_version": "1.0.0",
+  "instantiate": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "InstantiateMsg",
+    "type": "object",
+    "required": [
+      "decay_ends_at",
+      "decay_starts_at",
+      "merge_denom",
+      "merge_supply",
+      "ruji_allocation",
+      "ruji_denom"
+    ],
+    "properties": {
+      "decay_ends_at": {
+        "description": "The end of the merge period, when deposit ratio = `0`",
+        "allOf": [
+          {
+            "$ref": "#/definitions/Timestamp"
+          }
+        ]
+      },
+      "decay_starts_at": {
+        "description": "The end of the grace period where deposit ratio = `ruji_allocation / merge_supply`",
+        "allOf": [
+          {
+            "$ref": "#/definitions/Timestamp"
+          }
+        ]
+      },
+      "merge_denom": {
+        "description": "The token being merged into RUJI",
+        "type": "string"
+      },
+      "merge_supply": {
+        "description": "The total supply of the merged token",
+        "allOf": [
+          {
+            "$ref": "#/definitions/Uint128"
+          }
+        ]
+      },
+      "ruji_allocation": {
+        "description": "The total allocation of $RUJI to be distributed amongst `merge_denom` mergers",
+        "allOf": [
+          {
+            "$ref": "#/definitions/Uint128"
+          }
+        ]
+      },
+      "ruji_denom": {
+        "description": "The denom string for $RUJI",
+        "type": "string"
+      }
+    },
+    "additionalProperties": false,
+    "definitions": {
+      "Timestamp": {
+        "description": "A point in time in nanosecond precision.\n\nThis type can represent times from 1970-01-01T00:00:00Z to 2554-07-21T23:34:33Z.\n\n## Examples\n\n``` # use cosmwasm_std::Timestamp; let ts = Timestamp::from_nanos(1_000_000_202); assert_eq!(ts.nanos(), 1_000_000_202); assert_eq!(ts.seconds(), 1); assert_eq!(ts.subsec_nanos(), 202);\n\nlet ts = ts.plus_seconds(2); assert_eq!(ts.nanos(), 3_000_000_202); assert_eq!(ts.seconds(), 3); assert_eq!(ts.subsec_nanos(), 202); ```",
+        "allOf": [
+          {
+            "$ref": "#/definitions/Uint64"
+          }
+        ]
+      },
+      "Uint128": {
+        "description": "A thin wrapper around u128 that is using strings for JSON encoding/decoding, such that the full u128 range can be used for clients that convert JSON numbers to floats, like JavaScript and jq.\n\n# Examples\n\nUse `from` to create instances of this and `u128` to get the value out:\n\n``` # use cosmwasm_std::Uint128; let a = Uint128::from(123u128); assert_eq!(a.u128(), 123);\n\nlet b = Uint128::from(42u64); assert_eq!(b.u128(), 42);\n\nlet c = Uint128::from(70u32); assert_eq!(c.u128(), 70); ```",
+        "type": "string"
+      },
+      "Uint64": {
+        "description": "A thin wrapper around u64 that is using strings for JSON encoding/decoding, such that the full u64 range can be used for clients that convert JSON numbers to floats, like JavaScript and jq.\n\n# Examples\n\nUse `from` to create instances of this and `u64` to get the value out:\n\n``` # use cosmwasm_std::Uint64; let a = Uint64::from(42u64); assert_eq!(a.u64(), 42);\n\nlet b = Uint64::from(70u32); assert_eq!(b.u64(), 70); ```",
+        "type": "string"
+      }
+    }
+  },
+  "execute": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "ExecuteMsg",
+    "oneOf": [
+      {
+        "description": "Send `[InstantiateMsg::merge_denom]` to the contract. This increments TOTAL_ALLOCATED by `deposit_value` where `deposit_value = deposit_amount * share_ratio * decay_factor` `share_ratio = ruji_allocation / merge_supply` and `decay_factor = (decay_ends_at - env.block.time) / (decay_ends_at - decay_starts_at)` `TOTAL_MERGED` is incremented by the quantity of tokens sent Finally, Shares are issued to info.sender such that the value of `[QueryMsg::StatusResponse] * (shares / total_shares) = deposit_value`, in order to maintain the current deposit_value and also accrue future increases of `[QueryMsg::StatusResponse]` proportionally based on share ownership",
+        "type": "object",
+        "required": [
+          "deposit"
+        ],
+        "properties": {
+          "deposit": {
+            "type": "object",
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "description": "Withdraws the amount `[InstantiateMsg::ruji_denom]` allocated to the `share_amount`, and decreases the Share Account of `info.sender`",
+        "type": "object",
+        "required": [
+          "withdraw"
+        ],
+        "properties": {
+          "withdraw": {
+            "type": "object",
+            "required": [
+              "share_amount"
+            ],
+            "properties": {
+              "share_amount": {
+                "$ref": "#/definitions/Uint128"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      }
+    ],
+    "definitions": {
+      "Uint128": {
+        "description": "A thin wrapper around u128 that is using strings for JSON encoding/decoding, such that the full u128 range can be used for clients that convert JSON numbers to floats, like JavaScript and jq.\n\n# Examples\n\nUse `from` to create instances of this and `u128` to get the value out:\n\n``` # use cosmwasm_std::Uint128; let a = Uint128::from(123u128); assert_eq!(a.u128(), 123);\n\nlet b = Uint128::from(42u64); assert_eq!(b.u128(), 42);\n\nlet c = Uint128::from(70u32); assert_eq!(c.u128(), 70); ```",
+        "type": "string"
+      }
+    }
+  },
+  "query": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "QueryMsg",
+    "oneOf": [
+      {
+        "type": "object",
+        "required": [
+          "config"
+        ],
+        "properties": {
+          "config": {
+            "type": "object",
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "description": "Queries the total amount of unallocated `[InstantiateMsg::ruji_denom]` that cannot mathematically be allocated to new deposits Unallocated $RUJI is dependent on individual Deposit actions. Each time there is a deposit, Shares are claimed at Defined as `amount = ([InstantiateMsg::ruji_allocation] - TOTAL_ALLOCATED) + (decay_factor * base_ratio * ([InstantiateMsg::merge_supply] - TOTAL_MERGED)` where `base_ratio = ruji_allocation / merge_supply` and `decay_factor = (env.block.time - [InstantiateMsg::decay_starts_at]) / ([InstantiateMsg::decay_ends_at] - [InstantiateMsg::decay_starts_at])`",
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "type": "object",
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "required": [
+          "account"
+        ],
+        "properties": {
+          "account": {
+            "type": "object",
+            "required": [
+              "addr"
+            ],
+            "properties": {
+              "addr": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      }
+    ]
+  },
+  "migrate": null,
+  "sudo": null,
+  "responses": {
+    "account": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "AccountResponse",
+      "type": "object",
+      "required": [
+        "addr",
+        "merged",
+        "shares",
+        "size"
+      ],
+      "properties": {
+        "addr": {
+          "type": "string"
+        },
+        "merged": {
+          "description": "Total `[InstantiateMsg::merge_denom]` merged by this account",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Uint128"
+            }
+          ]
+        },
+        "shares": {
+          "description": "Total shares issued",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Uint128"
+            }
+          ]
+        },
+        "size": {
+          "description": "Total `[InstantiateMsg::ruji_denom]` allocation that `shares` represents",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Uint128"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "definitions": {
+        "Uint128": {
+          "description": "A thin wrapper around u128 that is using strings for JSON encoding/decoding, such that the full u128 range can be used for clients that convert JSON numbers to floats, like JavaScript and jq.\n\n# Examples\n\nUse `from` to create instances of this and `u128` to get the value out:\n\n``` # use cosmwasm_std::Uint128; let a = Uint128::from(123u128); assert_eq!(a.u128(), 123);\n\nlet b = Uint128::from(42u64); assert_eq!(b.u128(), 42);\n\nlet c = Uint128::from(70u32); assert_eq!(c.u128(), 70); ```",
+          "type": "string"
+        }
+      }
+    },
+    "config": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ConfigResponse",
+      "type": "object",
+      "required": [
+        "decay_ends_at",
+        "decay_starts_at",
+        "merge_denom",
+        "merge_supply",
+        "ruji_allocation",
+        "ruji_denom"
+      ],
+      "properties": {
+        "decay_ends_at": {
+          "$ref": "#/definitions/Timestamp"
+        },
+        "decay_starts_at": {
+          "$ref": "#/definitions/Timestamp"
+        },
+        "merge_denom": {
+          "type": "string"
+        },
+        "merge_supply": {
+          "$ref": "#/definitions/Uint128"
+        },
+        "ruji_allocation": {
+          "$ref": "#/definitions/Uint128"
+        },
+        "ruji_denom": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "definitions": {
+        "Timestamp": {
+          "description": "A point in time in nanosecond precision.\n\nThis type can represent times from 1970-01-01T00:00:00Z to 2554-07-21T23:34:33Z.\n\n## Examples\n\n``` # use cosmwasm_std::Timestamp; let ts = Timestamp::from_nanos(1_000_000_202); assert_eq!(ts.nanos(), 1_000_000_202); assert_eq!(ts.seconds(), 1); assert_eq!(ts.subsec_nanos(), 202);\n\nlet ts = ts.plus_seconds(2); assert_eq!(ts.nanos(), 3_000_000_202); assert_eq!(ts.seconds(), 3); assert_eq!(ts.subsec_nanos(), 202); ```",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Uint64"
+            }
+          ]
+        },
+        "Uint128": {
+          "description": "A thin wrapper around u128 that is using strings for JSON encoding/decoding, such that the full u128 range can be used for clients that convert JSON numbers to floats, like JavaScript and jq.\n\n# Examples\n\nUse `from` to create instances of this and `u128` to get the value out:\n\n``` # use cosmwasm_std::Uint128; let a = Uint128::from(123u128); assert_eq!(a.u128(), 123);\n\nlet b = Uint128::from(42u64); assert_eq!(b.u128(), 42);\n\nlet c = Uint128::from(70u32); assert_eq!(c.u128(), 70); ```",
+          "type": "string"
+        },
+        "Uint64": {
+          "description": "A thin wrapper around u64 that is using strings for JSON encoding/decoding, such that the full u64 range can be used for clients that convert JSON numbers to floats, like JavaScript and jq.\n\n# Examples\n\nUse `from` to create instances of this and `u64` to get the value out:\n\n``` # use cosmwasm_std::Uint64; let a = Uint64::from(42u64); assert_eq!(a.u64(), 42);\n\nlet b = Uint64::from(70u32); assert_eq!(b.u64(), 70); ```",
+          "type": "string"
+        }
+      }
+    },
+    "status": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "StatusResponse",
+      "type": "object",
+      "required": [
+        "merged",
+        "shares",
+        "size"
+      ],
+      "properties": {
+        "merged": {
+          "description": "Total `[InstantiateMsg::merge_denom]` merged",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Uint128"
+            }
+          ]
+        },
+        "shares": {
+          "description": "Total shares issued",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Uint128"
+            }
+          ]
+        },
+        "size": {
+          "description": "Total `[InstantiateMsg::ruji_denom]` allocated to shareholders",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Uint128"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "definitions": {
+        "Uint128": {
+          "description": "A thin wrapper around u128 that is using strings for JSON encoding/decoding, such that the full u128 range can be used for clients that convert JSON numbers to floats, like JavaScript and jq.\n\n# Examples\n\nUse `from` to create instances of this and `u128` to get the value out:\n\n``` # use cosmwasm_std::Uint128; let a = Uint128::from(123u128); assert_eq!(a.u128(), 123);\n\nlet b = Uint128::from(42u64); assert_eq!(b.u128(), 42);\n\nlet c = Uint128::from(70u32); assert_eq!(c.u128(), 70); ```",
+          "type": "string"
+        }
+      }
+    }
+  }
+}

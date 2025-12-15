@@ -1,0 +1,274 @@
+{
+  "contract_name": "rujira-demo",
+  "contract_version": "0.0.0",
+  "idl_version": "1.0.0",
+  "instantiate": null,
+  "execute": null,
+  "query": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "QueryMsg",
+    "oneOf": [
+      {
+        "type": "object",
+        "required": [
+          "pool"
+        ],
+        "properties": {
+          "pool": {
+            "$ref": "#/definitions/Layer1Asset"
+          }
+        },
+        "additionalProperties": false
+      }
+    ],
+    "definitions": {
+      "Layer1Asset": {
+        "type": "object",
+        "required": [
+          "chain",
+          "symbol"
+        ],
+        "properties": {
+          "chain": {
+            "type": "string"
+          },
+          "symbol": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "migrate": null,
+  "sudo": null,
+  "responses": {
+    "pool": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Pool",
+      "type": "object",
+      "required": [
+        "asset",
+        "asset_tor_price",
+        "balance_asset",
+        "balance_rune",
+        "decimals",
+        "derived_depth_bps",
+        "lp_units",
+        "pending_inbound_asset",
+        "pending_inbound_rune",
+        "pool_units",
+        "savers_capacity_remaining",
+        "savers_depth",
+        "savers_fill_bps",
+        "savers_units",
+        "short_code",
+        "status",
+        "synth_mint_paused",
+        "synth_supply",
+        "synth_supply_remaining",
+        "synth_units",
+        "trading_halted"
+      ],
+      "properties": {
+        "asset": {
+          "$ref": "#/definitions/Asset"
+        },
+        "asset_tor_price": {
+          "description": "the USD (TOR) price of the asset in 1e8",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Decimal"
+            }
+          ]
+        },
+        "balance_asset": {
+          "$ref": "#/definitions/Uint128"
+        },
+        "balance_rune": {
+          "$ref": "#/definitions/Uint128"
+        },
+        "decimals": {
+          "type": "integer",
+          "format": "uint8",
+          "minimum": 0.0
+        },
+        "derived_depth_bps": {
+          "description": "the depth of the derived virtual pool relative to L1 pool (in basis points)",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0.0
+        },
+        "lp_units": {
+          "description": "the total pool liquidity provider units",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Uint128"
+            }
+          ]
+        },
+        "pending_inbound_asset": {
+          "$ref": "#/definitions/Uint128"
+        },
+        "pending_inbound_rune": {
+          "$ref": "#/definitions/Uint128"
+        },
+        "pool_units": {
+          "description": "the total pool units, this is the sum of LP and synth units",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Uint128"
+            }
+          ]
+        },
+        "savers_capacity_remaining": {
+          "description": "amount of remaining capacity in asset",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Uint128"
+            }
+          ]
+        },
+        "savers_depth": {
+          "description": "the balance of L1 asset deposited into the Savers Vault",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Uint128"
+            }
+          ]
+        },
+        "savers_fill_bps": {
+          "description": "the filled savers capacity in basis points, 4500/10000 = 45%",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0.0
+        },
+        "savers_units": {
+          "description": "the number of units owned by Savers",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Uint128"
+            }
+          ]
+        },
+        "short_code": {
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/definitions/PoolStatus"
+        },
+        "synth_mint_paused": {
+          "description": "whether additional synths cannot be minted",
+          "type": "boolean"
+        },
+        "synth_supply": {
+          "description": "the total supply of synths for the asset",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Uint128"
+            }
+          ]
+        },
+        "synth_supply_remaining": {
+          "description": "the amount of synth supply remaining before the current max supply is reached",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Uint128"
+            }
+          ]
+        },
+        "synth_units": {
+          "description": "the total synth units in the pool",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Uint128"
+            }
+          ]
+        },
+        "trading_halted": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false,
+      "definitions": {
+        "Asset": {
+          "oneOf": [
+            {
+              "type": "object",
+              "required": [
+                "secured"
+              ],
+              "properties": {
+                "secured": {
+                  "$ref": "#/definitions/SecuredAsset"
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": [
+                "layer1"
+              ],
+              "properties": {
+                "layer1": {
+                  "$ref": "#/definitions/Layer1Asset"
+                }
+              },
+              "additionalProperties": false
+            }
+          ]
+        },
+        "Decimal": {
+          "description": "A fixed-point decimal value with 18 fractional digits, i.e. Decimal(1_000_000_000_000_000_000) == 1.0\n\nThe greatest possible value that can be represented is 340282366920938463463.374607431768211455 (which is (2^128 - 1) / 10^18)",
+          "type": "string"
+        },
+        "Layer1Asset": {
+          "type": "object",
+          "required": [
+            "chain",
+            "symbol"
+          ],
+          "properties": {
+            "chain": {
+              "type": "string"
+            },
+            "symbol": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "PoolStatus": {
+          "type": "string",
+          "enum": [
+            "unknown",
+            "available",
+            "staged",
+            "suspended"
+          ]
+        },
+        "SecuredAsset": {
+          "type": "object",
+          "required": [
+            "chain",
+            "symbol"
+          ],
+          "properties": {
+            "chain": {
+              "type": "string"
+            },
+            "symbol": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "Uint128": {
+          "description": "A thin wrapper around u128 that is using strings for JSON encoding/decoding, such that the full u128 range can be used for clients that convert JSON numbers to floats, like JavaScript and jq.\n\n# Examples\n\nUse `from` to create instances of this and `u128` to get the value out:\n\n``` # use cosmwasm_std::Uint128; let a = Uint128::from(123u128); assert_eq!(a.u128(), 123);\n\nlet b = Uint128::from(42u64); assert_eq!(b.u128(), 42);\n\nlet c = Uint128::from(70u32); assert_eq!(c.u128(), 70); ```",
+          "type": "string"
+        }
+      }
+    }
+  }
+}
