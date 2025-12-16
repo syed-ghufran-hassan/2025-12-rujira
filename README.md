@@ -144,6 +144,14 @@ The contracts in scope can be compiled by navigating to their respective folders
 cargo build
 ```
 
+#### Compilation Script
+
+For users that are on a UNIX operating system, a dedicated script exists that allows the contracts to be compiled. This script can be run using the following command, and requires Docker to function (`29.1.3` tested):
+
+```bash
+bash scripts/optimize.sh
+```
+
 ### Testing
 
 Similarly, tests for each module can be executed by navigating to its dedicated folder and executing the following `cargo` command:
