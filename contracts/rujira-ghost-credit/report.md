@@ -189,7 +189,7 @@ impl CreditAccount {
 ```
 `contract.rs`
 
-Modify accountmsg::replay(coin) in the function that enforces minimum repayment of 5 percent of total debt. It rejects repayment beelow minimum threshold. Low LTV positions (<0.9) have no minimum requirement
+Modify accountmsg::replay(coin) in the function execute_account() in contract.rs that enforces minimum repayment of 5 percent of total debt. It rejects repayment beelow minimum threshold. Low LTV positions (<0.9) have no minimum requirement. 
 ```rust
  AccountMsg::Repay(coin) => {
     let vault = BORROW.load(deps.storage, coin.denom.clone())?;
@@ -621,4 +621,37 @@ test tests::liquidation::liquidation_preference_order ... ok
 
 
 ```
+
+- Title: Infinite Loan Rollover
+
+- Description:
+- The protocol's LTV (Loan-to-Value) calculation correctly used adjusted collateral values (collateral × collateralization ratio), but the economic design created perverse incentives. When positions approached liquidation thresholds, users could add small amounts of collateral instead of repaying debt, effectively rolling over loans indefinitely without reducing principal. No enforcement of minimum repayment amounts for high LTV positions. Users could repay tiny amounts (e.g., $1) while adding thousands in collateral.
+
+- The protocol allowed users to:
+
+   - Maintain positions at high LTV (>90%) indefinitely
+
+  -  Add collateral instead of repaying debt
+
+    - Exploit the economic reality that adding collateral is cheaper than repaying (users retain ownership of collateral assets)
+
+    
+- Impact
+
+- Short-term benefit: Users can maintain leveraged positions indefinitely
+
+- ❌ Long-term risk: Users accumulate more collateral risk without debt reduction
+
+- ❌ Systemic risk: Protocol accumulates bad debt during bear markets
+
+```rust
+BEFORE FIX (Infinite Rollover):
+LTV: 1.25 → Add collateral → LTV: 1.0 → Price drops → Add collateral → ...
+Debt: CONSTANT at $40,000
+
+AFTER FIX (Forced Reduction):
+LTV: 1.25 → Must repay 5% ($2,000) → LTV: ~1.19 → Price drops → Must repay 5% → ...
+Debt: $40,000 → $38,000 → $36,100 → ... (CONTINUOUSLY DECREASING!)
+```
+
 
