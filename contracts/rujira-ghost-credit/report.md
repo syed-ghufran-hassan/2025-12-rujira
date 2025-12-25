@@ -654,4 +654,84 @@ LTV: 1.25 → Must repay 5% ($2,000) → LTV: ~1.19 → Price drops → Must rep
 Debt: $40,000 → $38,000 → $36,100 → ... (CONTINUOUSLY DECREASING!)
 ```
 
+```rust
+// contracts/rujira-ghost-credit/src/config.rs
+
+impl Config {
+    pub fn validate(&self) -> Result<(), ContractError> {
+        // Check adjustment_threshold is between 0 and 1
+        if self.adjustment_threshold.is_zero() || self.adjustment_threshold > Decimal::one() {
+            return Err(ContractError::InvalidConfig {
+                key: "adjustment_threshold".to_string(),
+                value: self.adjustment_threshold.to_string(),
+            });
+        }
+        
+        // Check liquidation_threshold is between 0 and 1
+        if self.liquidation_threshold.is_zero() || self.liquidation_threshold > Decimal::one() {
+            return Err(ContractError::InvalidConfig {
+                key: "liquidation_threshold".to_string(),
+                value: self.liquidation_threshold.to_string(),
+            });
+        }
+        
+        // CHANGED: Allow liquidation_threshold to be EQUAL to adjustment_threshold
+        // (This is what we want - both at 90%)
+        if self.liquidation_threshold < self.adjustment_threshold {
+            return Err(ContractError::InvalidConfig {
+                key: "liquidation_threshold".to_string(),
+                value: format!("{} < adjustment_threshold {}", 
+                    self.liquidation_threshold, 
+                    self.adjustment_threshold),
+            });
+        }
+        
+        // ... rest of validation
+    }
+}
+```
+Before: Rejected liquidation_threshold <= adjustment_threshold
+After: Allows liquidation_threshold == adjustment_threshold
+(for above)
+
+```rust
+// BEFORE:
+account.check_unsafe(&config.liquidation_threshold)?;
+
+// AFTER:
+account.check_unsafe(&config.adjustment_threshold)?;  // Use adjustment_threshold!
+contract.rs
+```
+
+```rust
+let check = account
+    // Check safe against the liquidation threshold
+    .check_safe(&config.adjustment_threshold)
+    // Check we've not gone below the adjustment threshold
+    .and_then(|_| account.check_unsafe(&config.adjustment_threshold))  // CHANGED!
+    .and_then(|_| {
+        account.validate_liquidation(deps.as_ref(), &config, &original_account)
+    });
+    contract.rs
+    ```
+
+    ```rust
+    ExecuteMsg::Account { addr, msgs } => {
+    let mut account =
+        CreditAccount::load(deps.as_ref(), &config, &ca, deps.api.addr_validate(&addr)?)?;
+    ensure_eq!(account.owner, info.sender, ContractError::Unauthorized {});
+    
+    // ADDED: Block ALL actions if LTV >= adjustment_threshold
+    account.check_safe(&config.adjustment_threshold)?;
+    
+    let mut response = Response::default().add_event(event_execute_account(&account));
+    // ... rest of code
+}
+contracr.rs
+```
+
+
+
+    
+
 
