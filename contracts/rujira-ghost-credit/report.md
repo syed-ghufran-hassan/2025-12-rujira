@@ -730,6 +730,193 @@ let check = account
 contracr.rs
 ```
 
+```rust
+ExecuteMsg::DoLiquidate {
+    addr,
+    mut queue,
+    payload,
+} => {
+    ensure_eq!(info.sender, ca, ContractError::Unauthorized {});
+    let account = CreditAccount::load(deps.as_ref(), &config, &ca, deps.api.addr_validate(&addr)?)?;
+    let original_account: CreditAccount = from_json(&payload)?;
+
+    // 🟢 ADD THIS CHECK: Track debt reduction
+    let original_debt = original_account.total_debt(deps.as_ref(), &config)?;
+    let current_debt = account.total_debt(deps.as_ref(), &config)?;
+    
+    let check = account
+        .check_safe(&config.liquidation_threshold)
+        .and_then(|_| account.check_unsafe(&config.adjustment_threshold))
+        .and_then(|_| {
+            // 🔴 REPLACE THIS: validate_liquidation() should require debt reduction
+            account.validate_liquidation_with_debt_reduction(
+                deps.as_ref(),
+                &config,
+                &original_account,
+                original_debt,
+                current_debt,
+            )
+        });
+    
+    match (queue.pop(), check) {
+        (_, Ok(())) => {
+            // 🟢 ADD FINAL VALIDATION: Ensure minimum debt was actually repaid
+            let final_debt = CreditAccount::load(
+                deps.as_ref(), 
+                &config, 
+                &ca, 
+                deps.api.addr_validate(&addr)?
+            )?.total_debt(deps.as_ref(), &config)?;
+            
+            let debt_reduction = original_debt - final_debt;
+            let min_required = original_debt * config.min_liquidation_repayment_ratio;
+            
+            ensure!(
+                debt_reduction >= min_required,
+                ContractError::InsufficientDebtRepayment {
+                    required: min_required,
+                    actual: debt_reduction,
+                }
+            );
+            
+            Ok(Response::default())
+        },
+        // ... rest of the code
+    }
+}
+
+
+AccountMsg::SetPreferenceMsgs(msgs) => {
+    // 🟢 RESTRICT what users can set as liquidation preferences
+    for msg in &msgs {
+        match msg {
+            // Allow only debt repayment, NOT arbitrary execution
+            LiquidateMsg::Repay(_) => {
+                // ✅ Safe - actually reduces debt
+            }
+            LiquidateMsg::Execute { .. } => {
+                // ❌ Dangerous - can add collateral instead of repaying
+                return Err(ContractError::UnsafeLiquidationPreference {
+                    msg_type: "Execute".to_string(),
+                });
+            }
+        }
+    }
+    
+    account.set_preference_msgs(msgs);
+    Ok((vec![], vec![event_execute_account_set_preference_msgs()]))
+}
+
+// In config.rs or wherever Config is defined
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct Config {
+    pub liquidation_threshold: Decimal,
+    pub adjustment_threshold: Decimal,
+    pub collateral_ratios: HashMap<String, Decimal>,
+    pub fee_liquidation: Decimal,
+    pub fee_liquidator: Decimal,
+    pub fee_address: Addr,
+    pub code_id: u64,
+    
+    // 🟢 ADD THIS: Minimum debt reduction required during liquidation
+    pub min_liquidation_repayment_ratio: Decimal,
+}
+
+impl Config {
+    pub fn validate(&self) -> Result<(), ContractError> {
+        // Existing validation...
+        
+        // 🟢 ADD: Validate minimum repayment ratio
+        ensure!(
+            self.min_liquidation_repayment_ratio > Decimal::zero(),
+            ContractError::InvalidConfig {
+                field: "min_liquidation_repayment_ratio".to_string(),
+                reason: "Must be greater than zero".to_string(),
+            }
+        );
+        
+        ensure!(
+            self.min_liquidation_repayment_ratio <= Decimal::one(),
+            ContractError::InvalidConfig {
+                field: "min_liquidation_repayment_ratio".to_string(),
+                reason: "Cannot exceed 100%".to_string(),
+            }
+        );
+        
+        Ok(())
+    }
+}
+
+// In account.rs (CreditAccount implementation)
+impl CreditAccount {
+    pub fn validate_liquidation_with_debt_reduction(
+        &self,
+        deps: Deps,
+        config: &Config,
+        original_account: &CreditAccount,
+        original_debt: Decimal,
+        current_debt: Decimal,
+    ) -> Result<(), ContractError> {
+        // Check current LTV is safe
+        self.check_safe(&config.liquidation_threshold)?;
+        
+        // 🟢 CRITICAL: Require minimum debt reduction
+        let debt_reduction = original_debt - current_debt;
+        let min_required = original_debt * config.min_liquidation_repayment_ratio;
+        
+        // For liquidation preferences (user-defined), require MORE debt reduction
+        // because users might try to game the system
+        let required_ratio = if is_user_preference {
+            config.min_liquidation_repayment_ratio * Decimal::from_atomics(2u128, 0)? // 2x for user preferences
+        } else {
+            config.min_liquidation_repayment_ratio
+        };
+        
+        let required = original_debt * required_ratio;
+        
+        ensure!(
+            debt_reduction >= required,
+            ContractError::InsufficientDebtReduction {
+                required,
+                actual: debt_reduction,
+                is_preference: is_user_preference,
+            }
+        );
+        
+        Ok(())
+    }
+}
+
+// In CreditAccount struct
+pub struct CreditAccount {
+    pub owner: Addr,
+    pub account: rujira::Account,
+    pub liquidation_preferences: LiquidationPreferences,
+    pub tag: String,
+    
+    // 🟢 ADD: Track liquidation history
+    pub liquidation_attempts: u32,
+    pub last_liquidation_timestamp: u64,
+}
+
+// In DoLiquidate, update the account
+account.liquidation_attempts += 1;
+account.last_liquidation_timestamp = env.block.time.seconds();
+
+// Apply progressive penalties for repeated near-liquidation
+if account.liquidation_attempts > 3 {
+    // Increase required debt reduction ratio
+    let penalty_factor = Decimal::from_atomics(
+        (account.liquidation_attempts - 2) as u128, 
+        0
+    )?;
+    let adjusted_ratio = config.min_liquidation_repayment_ratio * (Decimal::one() + penalty_factor * Decimal::percent(10));
+    // Use adjusted_ratio for validation
+}
+
+
+```
+
 
 
     
